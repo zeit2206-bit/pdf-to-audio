@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<style>
+  :root {
+    --bg: #faf8f4; --fg: #24221f; --muted: #7a756d; --hl: #fde9a8; --hl-fg: #1d1b18;
+    --bar: rgba(250, 248, 244, .94); --line: #e4dfd5;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #17171a; --fg: #e6e3dd; --muted: #8d8a84; --hl: #5a4a17; --hl-fg: #fff6da;
+            --bar: rgba(23, 23, 26, .94); --line: #2c2c31; color-scheme: dark; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 1.15rem/1.75 Georgia, "Iowan Old Style", "Times New Roman", serif; }
+  header { position: sticky; top: 0; z-index: 1; background: var(--bar); backdrop-filter: blur(8px);
+           border-bottom: 1px solid var(--line); padding: .8rem 1rem; }
+  .wrap { max-width: 42rem; margin: 0 auto; }
+  h1 { font: 600 1.05rem/1.3 system-ui, sans-serif; margin: 0 0 .1rem; }
+  .meta { font: .8rem system-ui, sans-serif; color: var(--muted); margin-bottom: .5rem; }
+  audio { width: 100%; height: 2.5rem; }
+  .controls { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .4rem; font: .8rem system-ui, sans-serif; }
+  .controls button { font: inherit; padding: .2rem .6rem; border-radius: 1rem; cursor: pointer;
+                     border: 1px solid var(--line); background: transparent; color: var(--fg); }
+  .controls button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+  main { padding: 1.5rem 1rem 50vh; }
+  p { margin: 0 0 1.2em; }
+  span[data-i] { cursor: pointer; border-radius: .2em; transition: background .15s; }
+  span[data-i]:hover { background: color-mix(in srgb, var(--hl) 45%, transparent); }
+  span.on { background: var(--hl); color: var(--hl-fg); box-shadow: 0 0 0 .15em var(--hl); }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>{{TITLE}}</h1>
+  <div class="meta">Voice: {{VOICE}} · click any sentence to jump there</div>
+  <audio id="audio" controls preload="metadata" src="{{MP3}}"></audio>
+  <div class="controls" id="speeds"></div>
+</div></header>
+<main><div class="wrap">
+{{BODY}}
+</div></main>
+<script>
+  const cues = {{CUES}};
+  const audio = document.getElementById("audio");
+  const spans = [...document.querySelectorAll("span[data-i]")];
+  let current = -1, follow = true;
+
+  function find(t) {
+    let lo = 0, hi = cues.length - 1, ans = -1;
+    while (lo <= hi) { const m = (lo + hi) >> 1; if (cues[m][0] <= t) { ans = m; lo = m + 1; } else hi = m - 1; }
+    return ans;
+  }
+  function tick() {
+    const i = find(audio.currentTime);
+    if (i !== current) {
+      if (current >= 0) spans[current].classList.remove("on");
+      if (i >= 0) {
+        spans[i].classList.add("on");
+        if (follow) spans[i].scrollIntoView({ block: "center", behavior: "smooth" });
+      }
+      current = i;
+    }
+    if (!audio.paused) requestAnimationFrame(tick);
+  }
+  audio.addEventListener("play", tick);
+  audio.addEventListener("seeked", tick);
+  spans.forEach((s, i) => s.addEventListener("click", () => { audio.currentTime = cues[i][0] + 0.01; audio.play(); }));
+
+  // Pause auto-scroll while the reader scrolls manually; resume on next sentence click/play.
+  addEventListener("wheel", () => { follow = false; }, { passive: true });
+  addEventListener("touchmove", () => { follow = false; }, { passive: true });
+  audio.addEventListener("play", () => { follow = true; });
+  spans.forEach(s => s.addEventListener("click", () => { follow = true; }));
+
+  const box = document.getElementById("speeds");
+  [0.8, 1, 1.25, 1.5, 1.75, 2].forEach(r => {
+    const b = document.createElement("button");
+    b.textContent = r + "×"; b.setAttribute("aria-pressed", r === 1);
+    b.onclick = () => { audio.playbackRate = r;
+      box.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); };
+    box.appendChild(b);
+  });
+  addEventListener("keydown", e => {
+    if (e.code === "Space" && e.target === document.body) { e.preventDefault(); audio.paused ? audio.play() : audio.pause(); }
+  });
+</script>
+</body>
+</html>

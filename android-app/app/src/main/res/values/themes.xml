@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Audiobook" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#FF141416</item>
+        <item name="android:statusBarColor">#FF141416</item>
+        <item name="android:navigationBarColor">#FF141416</item>
+    </style>
+</resources>
